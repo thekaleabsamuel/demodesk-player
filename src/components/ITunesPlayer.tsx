@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Shuffle, Repeat } from "lucide-react";
 import WindowChrome from "./WindowChrome";
 
@@ -33,7 +33,58 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
   const [progress, setProgress] = useState(0);
   const [volume, setVolume] = useState(70);
   const [isClosing, setIsClosing] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const windowRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Center window on open
+  useEffect(() => {
+    if (isOpen && windowRef.current) {
+      const windowWidth = 800;
+      const windowHeight = 520;
+      setPosition({
+        x: (window.innerWidth - windowWidth) / 2,
+        y: (window.innerHeight - windowHeight) / 2,
+      });
+    }
+  }, [isOpen]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (windowRef.current) {
+      const rect = windowRef.current.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (isDragging) {
+      setPosition({
+        x: e.clientX - dragOffset.x,
+        y: e.clientY - dragOffset.y,
+      });
+    }
+  }, [isDragging, dragOffset]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -95,9 +146,19 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
   if (!isOpen) return null;
 
   return (
-    <div className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 ${isClosing ? 'animate-window-close' : 'animate-window-open'}`}>
+    <div 
+      ref={windowRef}
+      className={`fixed z-30 ${isClosing ? 'animate-window-close' : 'animate-window-open'} ${isDragging ? 'cursor-grabbing' : ''}`}
+      style={{ left: position.x, top: position.y }}
+    >
       <div className="w-[800px] rounded-window window-shadow overflow-hidden border border-[hsl(0_0%_0%/0.2)]">
-        <WindowChrome title="iTunes" onClose={handleClose} />
+        {/* Draggable Title Bar */}
+        <div 
+          onMouseDown={handleMouseDown}
+          className={`cursor-grab ${isDragging ? 'cursor-grabbing' : ''}`}
+        >
+          <WindowChrome title="iTunes" onClose={handleClose} />
+        </div>
         
         {/* Player Controls */}
         <div className="bg-itunes-gradient px-4 py-3 border-b border-[hsl(0_0%_0%/0.3)]">
