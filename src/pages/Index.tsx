@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { Music } from "lucide-react";
+import { Music, Globe } from "lucide-react";
 import MenuBar from "@/components/MenuBar";
 import Dock from "@/components/Dock";
 import ITunesPlayer from "@/components/ITunesPlayer";
+import SafariBrowser from "@/components/SafariBrowser";
 import DesktopIcon from "@/components/DesktopIcon";
 
 const Index = () => {
   const [isItunesOpen, setIsItunesOpen] = useState(false);
+  const [isSafariOpen, setIsSafariOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[hsl(220_40%_25%)] via-[hsl(280_30%_20%)] to-[hsl(320_35%_18%)] overflow-hidden relative">
@@ -25,7 +27,17 @@ const Index = () => {
           icon={<Music className="w-8 h-8 text-white" />}
           onClick={() => setIsItunesOpen(true)}
         />
+        <DesktopIcon 
+          name="Blog" 
+          icon={<Globe className="w-8 h-8 text-white" />}
+          onClick={() => setIsSafariOpen(true)}
+        />
       </div>
+
+      <SafariBrowser 
+        isOpen={isSafariOpen} 
+        onClose={() => setIsSafariOpen(false)} 
+      />
 
       <ITunesPlayer 
         isOpen={isItunesOpen} 
@@ -34,7 +46,9 @@ const Index = () => {
       
       <Dock 
         onOpeniTunes={() => setIsItunesOpen(true)}
+        onOpenSafari={() => setIsSafariOpen(true)}
         isItunesOpen={isItunesOpen}
+        isSafariOpen={isSafariOpen}
       />
     </div>
   );

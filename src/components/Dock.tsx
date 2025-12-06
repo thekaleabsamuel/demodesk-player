@@ -3,10 +3,12 @@ import { useState } from "react";
 
 interface DockProps {
   onOpeniTunes: () => void;
+  onOpenSafari: () => void;
   isItunesOpen: boolean;
+  isSafariOpen: boolean;
 }
 
-const Dock = ({ onOpeniTunes, isItunesOpen }: DockProps) => {
+const Dock = ({ onOpeniTunes, onOpenSafari, isItunesOpen, isSafariOpen }: DockProps) => {
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null);
   const [bouncingIcon, setBouncingIcon] = useState<string | null>(null);
 
@@ -24,8 +26,14 @@ const Dock = ({ onOpeniTunes, isItunesOpen }: DockProps) => {
       action: onOpeniTunes,
       isActive: isItunesOpen
     },
+    { 
+      name: "Safari", 
+      icon: Globe, 
+      color: "from-blue-400 to-cyan-400",
+      action: onOpenSafari,
+      isActive: isSafariOpen
+    },
     { name: "Finder", icon: Folder, color: "from-blue-400 to-blue-600" },
-    { name: "Safari", icon: Globe, color: "from-blue-300 to-blue-500" },
     { name: "Mail", icon: Mail, color: "from-blue-400 to-sky-500" },
     { name: "Settings", icon: Settings, color: "from-gray-400 to-gray-600" },
   ];
