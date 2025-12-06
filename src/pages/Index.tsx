@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { Music } from "lucide-react";
 import MenuBar from "@/components/MenuBar";
 import Dock from "@/components/Dock";
 import ITunesPlayer from "@/components/ITunesPlayer";
+import DesktopIcon from "@/components/DesktopIcon";
 
 const Index = () => {
   const [isItunesOpen, setIsItunesOpen] = useState(false);
@@ -16,18 +18,13 @@ const Index = () => {
 
       <MenuBar />
       
-      {/* Desktop Content Area */}
-      <div className="pt-12 pb-24 px-8 min-h-screen flex items-center justify-center">
-        {!isItunesOpen && (
-          <div className="text-center animate-fade-in">
-            <h1 className="text-5xl font-light text-foreground/90 mb-4 tracking-tight">
-              Welcome
-            </h1>
-            <p className="text-foreground/60 text-lg">
-              Click the iTunes icon in the dock to listen to demos
-            </p>
-          </div>
-        )}
+      {/* Desktop Icons */}
+      <div className="absolute top-10 right-4 pt-4 flex flex-col gap-2">
+        <DesktopIcon 
+          name="iTunes" 
+          icon={<Music className="w-8 h-8 text-white" />}
+          onClick={() => setIsItunesOpen(true)}
+        />
       </div>
 
       <ITunesPlayer 
