@@ -47,43 +47,39 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+        window: {
+          bg: "hsl(var(--window-bg))",
+          chrome: "hsl(var(--window-chrome))",
+          border: "hsl(var(--window-border))",
+        },
+        traffic: {
+          red: "hsl(var(--traffic-red))",
+          yellow: "hsl(var(--traffic-yellow))",
+          green: "hsl(var(--traffic-green))",
+        },
+        itunes: {
+          gradient: {
+            start: "hsl(var(--itunes-gradient-start))",
+            end: "hsl(var(--itunes-gradient-end))",
+          },
+          sidebar: "hsl(var(--itunes-sidebar))",
+          accent: "hsl(var(--itunes-accent))",
+          text: "hsl(var(--itunes-text))",
+          muted: "hsl(var(--itunes-text-muted))",
         },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        window: "10px",
       },
-      keyframes: {
-        "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
-        },
-        "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
-        },
+      fontFamily: {
+        system: ["-apple-system", "BlinkMacSystemFont", "SF Pro Display", "Segoe UI", "Roboto", "sans-serif"],
       },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+      backgroundImage: {
+        "itunes-gradient": "linear-gradient(to bottom, hsl(var(--itunes-gradient-start)), hsl(var(--itunes-gradient-end)))",
+        "menubar": "linear-gradient(to bottom, hsl(0 0% 100% / 0.9), hsl(0 0% 95% / 0.85))",
       },
     },
   },
