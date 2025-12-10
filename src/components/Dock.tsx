@@ -1,14 +1,16 @@
-import { Music, Folder, Settings, Mail, Globe } from "lucide-react";
+import { Music, Folder, Settings, Mail, Globe, FileText } from "lucide-react";
 import { useState } from "react";
 
 interface DockProps {
   onOpeniTunes: () => void;
   onOpenSafari: () => void;
+  onOpenTextEdit: () => void;
   isItunesOpen: boolean;
   isSafariOpen: boolean;
+  isTextEditOpen: boolean;
 }
 
-const Dock = ({ onOpeniTunes, onOpenSafari, isItunesOpen, isSafariOpen }: DockProps) => {
+const Dock = ({ onOpeniTunes, onOpenSafari, onOpenTextEdit, isItunesOpen, isSafariOpen, isTextEditOpen }: DockProps) => {
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null);
   const [bouncingIcon, setBouncingIcon] = useState<string | null>(null);
 
@@ -32,6 +34,13 @@ const Dock = ({ onOpeniTunes, onOpenSafari, isItunesOpen, isSafariOpen }: DockPr
       color: "from-blue-400 to-cyan-400",
       action: onOpenSafari,
       isActive: isSafariOpen
+    },
+    { 
+      name: "TextEdit", 
+      icon: FileText, 
+      color: "from-green-400 to-emerald-500",
+      action: onOpenTextEdit,
+      isActive: isTextEditOpen
     },
     { name: "Finder", icon: Folder, color: "from-blue-400 to-blue-600" },
     { name: "Mail", icon: Mail, color: "from-blue-400 to-sky-500" },

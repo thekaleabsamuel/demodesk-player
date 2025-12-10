@@ -16,7 +16,7 @@ const DesktopIcon = ({ name, icon, onClick }: DesktopIconProps) => {
       <div className="w-16 h-16 rounded-xl bg-gradient-to-b from-pink-500 to-orange-400 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
         {icon}
       </div>
-      <span className="text-xs text-foreground font-medium text-center drop-shadow-md">
+      <span className="text-xs text-black font-medium text-center drop-shadow-md">
         {name}
       </span>
     </button>

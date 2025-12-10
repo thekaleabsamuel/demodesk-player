@@ -1,107 +1,75 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Shuffle, Repeat, Music, Disc, ListMusic } from "lucide-react";
 import WindowChrome from "./WindowChrome";
-
-interface Track {
-  id: number;
-  title: string;
-  artist: string;
-  album: string;
-  duration: string;
-  durationSeconds: number;
-}
-
-interface Album {
-  id: string;
-  name: string;
-  year: string;
-  tracks: Track[];
-  color: string;
-}
+import { albums, type Album, type Track } from "@/data/albums";
+import { convertYouTubeUrl } from "@/lib/storage";
 
 interface ITunesPlayerProps {
   isOpen: boolean;
   onClose: () => void;
+  isMinimized?: boolean;
+  onMinimize?: () => void;
+  onRestore?: () => void;
+  onFocus?: () => void;
+  zIndex?: number;
 }
-
-const albums: Album[] = [
-  {
-    id: "demos-vol-1",
-    name: "Demos Vol. 1",
-    year: "2024",
-    color: "from-purple-500 to-pink-500",
-    tracks: [
-      { id: 1, title: "Late Night Drive", artist: "You", album: "Demos Vol. 1", duration: "3:42", durationSeconds: 222 },
-      { id: 2, title: "Sunrise Memories", artist: "You", album: "Demos Vol. 1", duration: "4:15", durationSeconds: 255 },
-      { id: 3, title: "City Lights", artist: "You", album: "Demos Vol. 1", duration: "3:58", durationSeconds: 238 },
-      { id: 4, title: "Echoes", artist: "You", album: "Demos Vol. 1", duration: "5:02", durationSeconds: 302 },
-      { id: 5, title: "Fading Away", artist: "You", album: "Demos Vol. 1", duration: "4:30", durationSeconds: 270 },
-    ],
-  },
-  {
-    id: "demos-vol-2",
-    name: "Demos Vol. 2",
-    year: "2024",
-    color: "from-blue-500 to-cyan-400",
-    tracks: [
-      { id: 6, title: "New Beginnings", artist: "You", album: "Demos Vol. 2", duration: "3:22", durationSeconds: 202 },
-      { id: 7, title: "Daydream", artist: "You", album: "Demos Vol. 2", duration: "4:45", durationSeconds: 285 },
-      { id: 8, title: "Midnight Blues", artist: "You", album: "Demos Vol. 2", duration: "5:18", durationSeconds: 318 },
-    ],
-  },
-  {
-    id: "summer-single",
-    name: "Summer Nights",
-    year: "2024",
-    color: "from-orange-500 to-yellow-400",
-    tracks: [
-      { id: 9, title: "Summer Nights", artist: "You", album: "Summer Nights - Single", duration: "3:55", durationSeconds: 235 },
-    ],
-  },
-  {
-    id: "moonlight-single",
-    name: "Moonlight",
-    year: "2023",
-    color: "from-indigo-500 to-purple-400",
-    tracks: [
-      { id: 10, title: "Moonlight", artist: "You", album: "Moonlight - Single", duration: "4:12", durationSeconds: 252 },
-    ],
-  },
-];
-
-const allTracks = albums.flatMap(album => album.tracks);
 
 type ViewMode = "library" | "albums" | "album-detail";
 
-const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
+const ITunesPlayer = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, onFocus, zIndex = 30 }: ITunesPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTrack, setCurrentTrack] = useState<Track>(allTracks[0]);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [progress, setProgress] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [scrubTime, setScrubTime] = useState<number | null>(null);
   const [volume, setVolume] = useState(70);
   const [isClosing, setIsClosing] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [viewMode, setViewMode] = useState<ViewMode>("library");
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDirection, setResizeDirection] = useState<string | null>(null);
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const [isMaximized, setIsMaximized] = useState(false);
+  const [savedPosition, setSavedPosition] = useState({ x: 0, y: 0 });
+  const [savedSize, setSavedSize] = useState({ width: 900, height: 550 });
+  const [viewMode, setViewMode] = useState<ViewMode>("albums");
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const windowRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const allTracks = albums.flatMap(album => album.tracks);
   const displayedTracks = selectedAlbum ? selectedAlbum.tracks : allTracks;
 
+  // Set first track as current if none selected
   useEffect(() => {
-    if (isOpen && windowRef.current) {
-      const windowWidth = 900;
-      const windowHeight = 550;
+    if (allTracks.length > 0 && !currentTrack) {
+      setCurrentTrack(allTracks[0]);
+    }
+  }, [allTracks.length]);
+
+  useEffect(() => {
+    if (isOpen && windowRef.current && !isMaximized) {
+      const windowWidth = savedSize.width;
+      const windowHeight = savedSize.height;
       setPosition({
         x: (window.innerWidth - windowWidth) / 2,
         y: (window.innerHeight - windowHeight) / 2,
       });
     }
-  }, [isOpen]);
+  }, [isOpen, isMaximized, savedSize]);
+
+  useEffect(() => {
+    if (isMaximized) {
+      setPosition({ x: 0, y: 0 });
+    } else if (isOpen && savedPosition.x !== 0 && savedPosition.y !== 0) {
+      setPosition(savedPosition);
+    }
+  }, [isMaximized, isOpen, savedPosition]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (windowRef.current) {
+    if (windowRef.current && !isMaximized) {
       const rect = windowRef.current.getBoundingClientRect();
       setDragOffset({
         x: e.clientX - rect.left,
@@ -109,23 +77,67 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
       });
       setIsDragging(true);
     }
-  }, []);
+  }, [isMaximized]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isDragging) {
+    if (isDragging && !isMaximized) {
       setPosition({
         x: e.clientX - dragOffset.x,
         y: e.clientY - dragOffset.y,
       });
+    } else if (isResizing && resizeDirection) {
+      const deltaX = e.clientX - resizeStart.x;
+      const deltaY = e.clientY - resizeStart.y;
+      
+      let newWidth = resizeStart.width;
+      let newHeight = resizeStart.height;
+      let newX = savedPosition.x;
+      let newY = savedPosition.y;
+
+      if (resizeDirection.includes('right')) {
+        newWidth = Math.max(600, resizeStart.width + deltaX);
+      }
+      if (resizeDirection.includes('left')) {
+        newWidth = Math.max(600, resizeStart.width - deltaX);
+        newX = savedPosition.x + deltaX;
+      }
+      if (resizeDirection.includes('bottom')) {
+        newHeight = Math.max(400, resizeStart.height + deltaY);
+      }
+      if (resizeDirection.includes('top')) {
+        newHeight = Math.max(400, resizeStart.height - deltaY);
+        newY = savedPosition.y + deltaY;
+      }
+
+      setSavedSize({ width: newWidth, height: newHeight });
+      setPosition({ x: newX, y: newY });
     }
-  }, [isDragging, dragOffset]);
+  }, [isDragging, isResizing, resizeDirection, resizeStart, dragOffset, isMaximized, savedPosition]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
+    setIsResizing(false);
+    setResizeDirection(null);
   }, []);
 
+  const handleResizeStart = useCallback((e: React.MouseEvent, direction: string) => {
+    e.stopPropagation();
+    if (windowRef.current && !isMaximized) {
+      const rect = windowRef.current.getBoundingClientRect();
+      setResizeStart({
+        x: e.clientX,
+        y: e.clientY,
+        width: rect.width,
+        height: rect.height,
+      });
+      setResizeDirection(direction);
+      setIsResizing(true);
+      setSavedPosition(position);
+    }
+  }, [isMaximized, position]);
+
   useEffect(() => {
-    if (isDragging) {
+    if (isDragging || isResizing) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
@@ -133,38 +145,260 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
+
+  // Handle audio playback
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
+    }
+  }, [volume]);
 
   useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            handleNext();
-            return 0;
+    if (audioRef.current && currentTrack) {
+      // Stop any current playback
+      const audio = audioRef.current;
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = ''; // Clear src first to prevent errors
+      
+      if (currentTrack.fileUrl) {
+        // Handle imported assets (from Vite), data URLs, and http/https URLs
+        // Vite imports return URLs like "/src/assets/file.mp3" or absolute URLs
+        const isValidUrl = typeof currentTrack.fileUrl === 'string' && 
+          (currentTrack.fileUrl.startsWith('data:') || 
+           currentTrack.fileUrl.startsWith('/') || 
+           currentTrack.fileUrl.startsWith('http')) &&
+          !currentTrack.fileUrl.startsWith('blob:');
+        
+        if (isValidUrl) {
+          console.log('Loading audio for track:', currentTrack.title);
+          
+          // Small delay to ensure previous load is cleared
+          setTimeout(() => {
+            if (audioRef.current && currentTrack && currentTrack.fileUrl) {
+              audioRef.current.src = currentTrack.fileUrl;
+              audioRef.current.load();
+              setProgress(0);
+              
+              // Log when audio is ready and update duration if available
+              audioRef.current.addEventListener('loadedmetadata', () => {
+                console.log('✅ Audio metadata loaded for:', currentTrack.title);
+                if (audioRef.current && audioRef.current.duration) {
+                  const durationSeconds = Math.floor(audioRef.current.duration);
+                  const mins = Math.floor(durationSeconds / 60);
+                  const secs = durationSeconds % 60;
+                  console.log(`Track duration: ${mins}:${secs.toString().padStart(2, '0')}`);
+                }
+              }, { once: true });
+              
+              audioRef.current.addEventListener('error', (e) => {
+                console.error('❌ Audio load error for:', currentTrack.title, e);
+              }, { once: true });
+            }
+          }, 50);
+        } else {
+          // Invalid URL (blob or other) - clear it silently
+          if (typeof currentTrack.fileUrl === 'string' && currentTrack.fileUrl.startsWith('blob:')) {
+            console.warn('❌ Blob URL detected for track:', currentTrack.title, '- Please re-upload the file.');
+          } else {
+            console.warn('❌ Invalid audio URL for track:', currentTrack.title);
           }
-          return prev + (100 / currentTrack.durationSeconds);
-        });
-      }, 1000);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+        }
+      } else {
+        console.warn('⚠️ No audio file for track:', currentTrack.title);
+      }
     }
+  }, [currentTrack]);
+
+  useEffect(() => {
+    if (!audioRef.current || !currentTrack) return;
+
+    const audio = audioRef.current;
+    
+    if (isPlaying) {
+      if (currentTrack.fileUrl && audio.src) {
+        // Wait for audio to be ready before playing
+        const playAudio = () => {
+          if (!audio.src || audio.readyState === 0) {
+            // No valid source or not loaded yet
+            setIsPlaying(false);
+            return;
+          }
+          
+          audio.play().catch(err => {
+            // Ignore AbortError and NotAllowedError (user interaction required)
+            if (err.name === 'AbortError' || err.name === 'NotAllowedError') {
+              // These are expected - don't log or change state
+              return;
+            }
+            // Only log unexpected errors
+            if (err.name !== 'NotSupportedError') {
+              console.error('Error playing audio:', err);
+            }
+            setIsPlaying(false);
+          });
+        };
+
+        if (audio.readyState >= 2) {
+          // HAVE_CURRENT_DATA or higher - safe to play
+          playAudio();
+        } else {
+          // Wait for canplay event
+          const handleCanPlay = () => {
+            playAudio();
+            audio.removeEventListener('canplay', handleCanPlay);
+          };
+          audio.addEventListener('canplay', handleCanPlay);
+          
+          return () => {
+            audio.removeEventListener('canplay', handleCanPlay);
+          };
+        }
+      } else if (!currentTrack.fileUrl) {
+        // Simulate playback if no file
+        intervalRef.current = setInterval(() => {
+          setProgress((prev) => {
+            if (prev >= 100) {
+              // Auto-advance to next track
+              const currentIndex = displayedTracks.findIndex(t => t.id === currentTrack.id);
+              const nextIndex = (currentIndex + 1) % displayedTracks.length;
+              setCurrentTrack(displayedTracks[nextIndex]);
+              return 0;
+            }
+            return prev + (100 / currentTrack.durationSeconds);
+          });
+        }, 1000);
+      }
+    } else {
+      if (currentTrack.fileUrl && audio.src) {
+        audio.pause();
+      } else {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      }
+    }
+    
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isPlaying, currentTrack]);
+  }, [isPlaying, currentTrack, displayedTracks]);
+
+  // Update progress from audio element (only when not scrubbing)
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || isScrubbing) return;
+
+    const updateProgress = () => {
+      if (audio.duration && currentTrack && !isScrubbing) {
+        const percent = (audio.currentTime / audio.duration) * 100;
+        setProgress(percent);
+      }
+    };
+
+    const handleTimeUpdate = () => updateProgress();
+    const handleEnded = () => {
+      if (currentTrack) {
+        const currentIndex = displayedTracks.findIndex(t => t.id === currentTrack.id);
+        const nextIndex = (currentIndex + 1) % displayedTracks.length;
+        setCurrentTrack(displayedTracks[nextIndex]);
+        setProgress(0);
+      }
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [currentTrack, displayedTracks, isScrubbing]);
+
+  // Handle progress bar scrubbing
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || !currentTrack || !audioRef.current.duration) return;
+    
+    const progressBar = e.currentTarget;
+    const rect = progressBar.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percent = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
+    const newTime = (percent / 100) * audioRef.current.duration;
+    
+    audioRef.current.currentTime = newTime;
+    setProgress(percent);
+    setScrubTime(Math.floor(newTime));
+    setTimeout(() => setScrubTime(null), 100); // Reset after a moment
+  };
+
+  const handleProgressMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || !currentTrack || !audioRef.current.duration) return;
+    
+    setIsScrubbing(true);
+    const progressBar = e.currentTarget;
+    const rect = progressBar.getBoundingClientRect();
+    
+    const updateScrub = (clientX: number) => {
+      const clickX = clientX - rect.left;
+      const percent = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
+      const newTime = (percent / 100) * audioRef.current.duration;
+      
+      if (audioRef.current) {
+        audioRef.current.currentTime = newTime;
+        setProgress(percent);
+        setScrubTime(Math.floor(newTime));
+      }
+    };
+    
+    updateScrub(e.clientX);
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      updateScrub(moveEvent.clientX);
+    };
+    
+    const handleMouseUp = () => {
+      setIsScrubbing(false);
+      setScrubTime(null);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
 
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
       setIsClosing(false);
+      setIsMaximized(false);
       onClose();
     }, 150);
+  };
+
+  const handleMinimize = () => {
+    if (onMinimize) {
+      onMinimize();
+    }
+  };
+
+  const handleMaximize = () => {
+    if (isMaximized) {
+      // Restore
+      setIsMaximized(false);
+      setPosition(savedPosition);
+    } else {
+      // Maximize
+      setSavedPosition(position);
+      setSavedSize({ width: 900, height: 550 });
+      setIsMaximized(true);
+      setPosition({ x: 0, y: 0 });
+    }
   };
 
   const handlePlayPause = () => setIsPlaying(!isPlaying);
 
   const handleNext = () => {
+    if (!currentTrack) return;
     const currentIndex = displayedTracks.findIndex(t => t.id === currentTrack.id);
     const nextIndex = (currentIndex + 1) % displayedTracks.length;
     setCurrentTrack(displayedTracks[nextIndex]);
@@ -172,6 +406,7 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
   };
 
   const handlePrev = () => {
+    if (!currentTrack) return;
     const currentIndex = displayedTracks.findIndex(t => t.id === currentTrack.id);
     const prevIndex = currentIndex === 0 ? displayedTracks.length - 1 : currentIndex - 1;
     setCurrentTrack(displayedTracks[prevIndex]);
@@ -200,24 +435,104 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const currentTime = Math.floor((progress / 100) * currentTrack.durationSeconds);
-  const currentAlbum = albums.find(a => a.tracks.some(t => t.id === currentTrack.id));
+  // Calculate current time from progress or audio element
+  const currentTime = scrubTime !== null 
+    ? scrubTime 
+    : (currentTrack ? Math.floor((progress / 100) * currentTrack.durationSeconds) : 0);
+  const currentAlbum = currentTrack ? albums.find(a => a.tracks.some(t => t.id === currentTrack.id)) : null;
 
-  if (!isOpen) return null;
+  if (!isOpen || isMinimized) return null;
+
+  if (albums.length === 0) {
+    return (
+      <div 
+        ref={windowRef}
+        onClick={(e) => {
+          // Don't focus if clicking on interactive elements
+          const target = e.target as HTMLElement;
+          if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || target.closest('button') || target.closest('input') || target.closest('a')) {
+            return;
+          }
+          onFocus?.();
+        }}
+        className={`fixed ${isClosing ? 'animate-window-close' : 'animate-window-open'} ${isDragging ? 'cursor-grabbing' : ''} ${isDragging || isResizing ? '' : 'transition-all duration-300'}`}
+        style={{ 
+          left: position.x, 
+          top: position.y,
+          zIndex: zIndex,
+          width: isMaximized ? '100vw' : 'auto',
+          height: isMaximized ? '100vh' : 'auto'
+        }}
+      >
+        <div 
+          className={`${isMaximized ? 'rounded-none' : 'rounded-window'} window-shadow overflow-hidden border border-[hsl(0_0%_0%/0.2)] relative`}
+          style={{ width: savedSize.width, height: savedSize.height }}
+        >
+          <div 
+            onMouseDown={handleMouseDown}
+            className={isMaximized ? '' : `cursor-grab ${isDragging ? 'cursor-grabbing' : ''}`}
+          >
+            <WindowChrome 
+              title="iTunes" 
+              onClose={handleClose}
+              onMinimize={handleMinimize}
+              onMaximize={handleMaximize}
+            />
+          </div>
+          <div className="flex items-center justify-center h-full bg-gradient-to-b from-[hsl(220_15%_18%)] to-[hsl(220_20%_12%)]">
+            <div className="text-center">
+              <Music className="w-16 h-16 text-itunes-muted mx-auto mb-4" />
+              <p className="text-itunes-text text-lg mb-2">No music yet</p>
+              <p className="text-itunes-muted text-sm">Add albums and tracks in the admin panel</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const windowWidth = isMaximized ? window.innerWidth : savedSize.width;
+  const windowHeight = isMaximized ? window.innerHeight : savedSize.height;
 
   return (
-    <div 
-      ref={windowRef}
-      className={`fixed z-30 ${isClosing ? 'animate-window-close' : 'animate-window-open'} ${isDragging ? 'cursor-grabbing' : ''}`}
-      style={{ left: position.x, top: position.y }}
-    >
-      <div className="w-[900px] rounded-window window-shadow overflow-hidden border border-[hsl(0_0%_0%/0.2)]">
+    <>
+      {/* Hidden audio element */}
+      <audio ref={audioRef} />
+      
+      <div 
+        ref={windowRef}
+        onClick={(e) => {
+          // Don't focus if clicking on interactive elements
+          const target = e.target as HTMLElement;
+          if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.tagName === 'A' || target.closest('button') || target.closest('input') || target.closest('a')) {
+            return;
+          }
+          onFocus?.();
+        }}
+        className={`fixed ${isClosing ? 'animate-window-close' : 'animate-window-open'} ${isDragging ? 'cursor-grabbing' : ''} ${isDragging || isResizing ? '' : 'transition-all duration-300'}`}
+        style={{ 
+          left: position.x, 
+          top: position.y,
+          zIndex: zIndex,
+          width: isMaximized ? '100vw' : 'auto',
+          height: isMaximized ? '100vh' : 'auto'
+        }}
+      >
+      <div 
+        className={`${isMaximized ? 'rounded-none' : 'rounded-window'} window-shadow overflow-hidden border border-[hsl(0_0%_0%/0.2)] relative`}
+        style={{ width: windowWidth, height: windowHeight }}
+      >
         {/* Draggable Title Bar */}
         <div 
           onMouseDown={handleMouseDown}
-          className={`cursor-grab ${isDragging ? 'cursor-grabbing' : ''}`}
+          className={isMaximized ? '' : `cursor-grab ${isDragging ? 'cursor-grabbing' : ''}`}
         >
-          <WindowChrome title="iTunes" onClose={handleClose} />
+          <WindowChrome 
+            title="iTunes" 
+            onClose={handleClose}
+            onMinimize={handleMinimize}
+            onMaximize={handleMaximize}
+          />
         </div>
         
         {/* Player Controls */}
@@ -247,23 +562,44 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
             <div className="flex-1">
               <div className="flex items-center gap-4">
                 {/* Album Art */}
-                <div className={`w-12 h-12 rounded bg-gradient-to-br ${currentAlbum?.color || 'from-purple-500 to-pink-500'} flex items-center justify-center shadow-lg`}>
-                  <span className="text-white text-lg font-bold">♪</span>
+                <div className={`w-12 h-12 rounded bg-gradient-to-br ${currentAlbum?.color || 'from-purple-500 to-pink-500'} flex items-center justify-center shadow-lg overflow-hidden relative`}>
+                  {(currentAlbum?.coverArt || currentTrack?.albumArt) ? (
+                    <img 
+                      src={currentTrack?.albumArt || currentAlbum?.coverArt} 
+                      alt={currentAlbum?.name || currentTrack?.title} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                  {(!currentAlbum?.coverArt && !currentTrack?.albumArt) && (
+                    <span className="text-white text-lg font-bold absolute">♪</span>
+                  )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-itunes-text truncate">{currentTrack.title}</p>
-                  <p className="text-xs text-itunes-muted truncate">{currentTrack.artist} — {currentTrack.album}</p>
+                  <p className="text-sm font-medium text-itunes-text truncate">{currentTrack?.title || "No track selected"}</p>
+                  <p className="text-xs text-itunes-muted truncate">{currentTrack ? `${currentTrack.artist} — ${currentTrack.album}` : ""}</p>
                   
                   {/* Progress Bar */}
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-[10px] text-itunes-muted w-8">{formatTime(currentTime)}</span>
-                    <div className="flex-1 h-1 bg-[hsl(var(--progress-bg))] rounded-full overflow-hidden">
+                    <div 
+                      className="flex-1 h-1 bg-[hsl(var(--progress-bg))] rounded-full overflow-hidden cursor-pointer relative group"
+                      onClick={handleProgressClick}
+                      onMouseDown={handleProgressMouseDown}
+                    >
                       <div 
                         className="h-full bg-[hsl(var(--progress-fill))] rounded-full transition-all duration-200"
-                        style={{ width: `${progress}%` }}
+                        style={{ width: `${progress}%`, transition: isScrubbing ? 'none' : 'width 0.1s linear' }}
+                      />
+                      {/* Hover indicator */}
+                      <div 
+                        className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-[hsl(var(--progress-fill))] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ left: `calc(${progress}% - 6px)` }}
                       />
                     </div>
-                    <span className="text-[10px] text-itunes-muted w-8 text-right">{currentTrack.duration}</span>
+                    <span className="text-[10px] text-itunes-muted w-8 text-right">{currentTrack?.duration || "0:00"}</span>
                   </div>
                 </div>
               </div>
@@ -272,17 +608,28 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
             {/* Volume */}
             <div className="flex items-center gap-2">
               <Volume2 className="w-4 h-4 text-itunes-muted" />
-              <div className="w-20 h-1 bg-[hsl(var(--progress-bg))] rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-[hsl(var(--progress-fill))] rounded-full"
-                  style={{ width: `${volume}%` }}
-                />
-              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={volume}
+                onChange={(e) => {
+                  const newVolume = parseInt(e.target.value);
+                  setVolume(newVolume);
+                  if (audioRef.current) {
+                    audioRef.current.volume = newVolume / 100;
+                  }
+                }}
+                className="w-20 h-1 bg-[hsl(var(--progress-bg))] rounded-full appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, hsl(var(--progress-fill)) 0%, hsl(var(--progress-fill)) ${volume}%, hsl(var(--progress-bg)) ${volume}%, hsl(var(--progress-bg)) 100%)`
+                }}
+              />
             </div>
           </div>
         </div>
 
-        <div className="flex h-[420px]">
+        <div className="flex" style={{ height: isMaximized ? `calc(100vh - 120px)` : '420px' }}>
           {/* Sidebar */}
           <div className="w-48 bg-[hsl(220_20%_14%)] border-r border-[hsl(0_0%_0%/0.3)] py-4">
             <div className="px-4 mb-4">
@@ -312,8 +659,20 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
                     onClick={() => handleAlbumSelect(album)}
                     className={`flex items-center gap-2 w-full px-2 py-1.5 rounded text-sm transition-colors text-left ${selectedAlbum?.id === album.id ? 'bg-itunes-accent/30 text-itunes-text' : 'text-itunes-muted hover:text-itunes-text'}`}
                   >
-                    <div className={`w-6 h-6 rounded bg-gradient-to-br ${album.color} flex items-center justify-center flex-shrink-0`}>
-                      <Music className="w-3 h-3 text-white" />
+                    <div className={`w-6 h-6 rounded bg-gradient-to-br ${album.color} flex items-center justify-center flex-shrink-0 overflow-hidden relative`}>
+                      {album.coverArt ? (
+                        <img 
+                          src={album.coverArt} 
+                          alt={album.name} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      {!album.coverArt && (
+                        <Music className="w-3 h-3 text-white absolute" />
+                      )}
                     </div>
                     <span className="truncate">{album.name}</span>
                   </button>
@@ -335,8 +694,20 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
                       onClick={() => handleAlbumSelect(album)}
                       className="group text-left"
                     >
-                      <div className={`aspect-square rounded-lg bg-gradient-to-br ${album.color} flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform`}>
-                        <Music className="w-16 h-16 text-white/80" />
+                      <div className={`aspect-square rounded-lg bg-gradient-to-br ${album.color} flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform overflow-hidden relative`}>
+                        {album.coverArt ? (
+                          <img 
+                            src={album.coverArt} 
+                            alt={album.name} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : null}
+                        {!album.coverArt && (
+                          <Music className="w-16 h-16 text-white/80 absolute" />
+                        )}
                       </div>
                       <h3 className="text-sm font-medium text-itunes-text mt-3 truncate">{album.name}</h3>
                       <p className="text-xs text-itunes-muted">{album.year} · {album.tracks.length} {album.tracks.length === 1 ? 'song' : 'songs'}</p>
@@ -349,8 +720,20 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
               <>
                 {selectedAlbum && (
                   <div className="p-4 border-b border-[hsl(0_0%_100%/0.1)] flex items-center gap-4">
-                    <div className={`w-20 h-20 rounded-lg bg-gradient-to-br ${selectedAlbum.color} flex items-center justify-center shadow-lg`}>
-                      <Music className="w-10 h-10 text-white/80" />
+                    <div className={`w-20 h-20 rounded-lg bg-gradient-to-br ${selectedAlbum.color} flex items-center justify-center shadow-lg overflow-hidden relative`}>
+                      {selectedAlbum.coverArt ? (
+                        <img 
+                          src={selectedAlbum.coverArt} 
+                          alt={selectedAlbum.name} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      {!selectedAlbum.coverArt && (
+                        <Music className="w-10 h-10 text-white/80 absolute" />
+                      )}
                     </div>
                     <div>
                       <h2 className="text-xl font-medium text-itunes-text">{selectedAlbum.name}</h2>
@@ -375,7 +758,7 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
                     className={`
                       grid grid-cols-[40px_1fr_150px_80px] gap-2 px-4 py-2 cursor-pointer
                       border-b border-[hsl(0_0%_100%/0.05)]
-                      ${currentTrack.id === track.id 
+                      ${currentTrack && currentTrack.id === track.id 
                         ? 'bg-itunes-accent/30 text-itunes-text' 
                         : 'text-itunes-muted hover:bg-[hsl(0_0%_100%/0.05)]'
                       }
@@ -383,7 +766,7 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
                     `}
                   >
                     <span className="text-sm text-center">
-                      {currentTrack.id === track.id && isPlaying ? (
+                      {currentTrack && currentTrack.id === track.id && isPlaying ? (
                         <span className="inline-block animate-pulse">♪</span>
                       ) : (
                         index + 1
@@ -407,8 +790,49 @@ const ITunesPlayer = ({ isOpen, onClose }: ITunesPlayerProps) => {
           </div>
           <span className="text-xs text-itunes-muted">{displayedTracks.length} {displayedTracks.length === 1 ? 'song' : 'songs'}</span>
         </div>
+
+        {/* Resize Handles */}
+        {!isMaximized && (
+          <>
+            {/* Corners */}
+            <div 
+              onMouseDown={(e) => handleResizeStart(e, 'top-left')}
+              className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize z-50"
+            />
+            <div 
+              onMouseDown={(e) => handleResizeStart(e, 'top-right')}
+              className="absolute top-0 right-0 w-4 h-4 cursor-nesw-resize z-50"
+            />
+            <div 
+              onMouseDown={(e) => handleResizeStart(e, 'bottom-left')}
+              className="absolute bottom-0 left-0 w-4 h-4 cursor-nesw-resize z-50"
+            />
+            <div 
+              onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
+              className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize z-50"
+            />
+            {/* Edges */}
+            <div 
+              onMouseDown={(e) => handleResizeStart(e, 'top')}
+              className="absolute top-0 left-4 right-4 h-2 cursor-ns-resize z-50"
+            />
+            <div 
+              onMouseDown={(e) => handleResizeStart(e, 'bottom')}
+              className="absolute bottom-0 left-4 right-4 h-2 cursor-ns-resize z-50"
+            />
+            <div 
+              onMouseDown={(e) => handleResizeStart(e, 'left')}
+              className="absolute left-0 top-4 bottom-4 w-2 cursor-ew-resize z-50"
+            />
+            <div 
+              onMouseDown={(e) => handleResizeStart(e, 'right')}
+              className="absolute right-0 top-4 bottom-4 w-2 cursor-ew-resize z-50"
+            />
+          </>
+        )}
       </div>
     </div>
+    </>
   );
 };
 
