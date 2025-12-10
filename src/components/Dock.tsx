@@ -5,12 +5,18 @@ interface DockProps {
   onOpeniTunes: () => void;
   onOpenSafari: () => void;
   onOpenTextEdit: () => void;
+  onOpenFinder: () => void;
+  onOpenEmail: () => void;
+  onOpenSettings: () => void;
   isItunesOpen: boolean;
   isSafariOpen: boolean;
   isTextEditOpen: boolean;
+  isFinderOpen: boolean;
+  isEmailOpen: boolean;
+  isSettingsOpen: boolean;
 }
 
-const Dock = ({ onOpeniTunes, onOpenSafari, onOpenTextEdit, isItunesOpen, isSafariOpen, isTextEditOpen }: DockProps) => {
+const Dock = ({ onOpeniTunes, onOpenSafari, onOpenTextEdit, onOpenFinder, onOpenEmail, onOpenSettings, isItunesOpen, isSafariOpen, isTextEditOpen, isFinderOpen, isEmailOpen, isSettingsOpen }: DockProps) => {
   const [hoveredIcon, setHoveredIcon] = useState<string | null>(null);
   const [bouncingIcon, setBouncingIcon] = useState<string | null>(null);
 
@@ -42,9 +48,27 @@ const Dock = ({ onOpeniTunes, onOpenSafari, onOpenTextEdit, isItunesOpen, isSafa
       action: onOpenTextEdit,
       isActive: isTextEditOpen
     },
-    { name: "Finder", icon: Folder, color: "from-blue-400 to-blue-600" },
-    { name: "Mail", icon: Mail, color: "from-blue-400 to-sky-500" },
-    { name: "Settings", icon: Settings, color: "from-gray-400 to-gray-600" },
+    { 
+      name: "Finder", 
+      icon: Folder, 
+      color: "from-blue-400 to-blue-600",
+      action: onOpenFinder,
+      isActive: isFinderOpen
+    },
+    { 
+      name: "Mail", 
+      icon: Mail, 
+      color: "from-blue-400 to-sky-500",
+      action: onOpenEmail,
+      isActive: isEmailOpen
+    },
+    { 
+      name: "Settings", 
+      icon: Settings, 
+      color: "from-gray-400 to-gray-600",
+      action: onOpenSettings,
+      isActive: isSettingsOpen
+    },
   ];
 
   return (
