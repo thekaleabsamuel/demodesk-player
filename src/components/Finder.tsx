@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Image, Music, FileText, Folder, File } from "lucide-react";
+import { Image, Music, FileText, Folder, File, X } from "lucide-react";
 import WindowChrome from "./WindowChrome";
+// Import actual images
+import twoGreedyImg from "@/assets/2greedy.png";
+import cardiganImg from "@/assets/Cardigan.png";
+import cumngoImg from "@/assets/cumngo.jpg";
+import lunaImg from "@/assets/Luna Character Design Sheet.png";
+import vampireImg from "@/assets/Vampire artwork.png";
 
 interface FinderProps {
   isOpen: boolean;
@@ -18,6 +24,7 @@ interface FileItem {
   icon: React.ReactNode;
   size?: string;
   date?: string;
+  imageSrc?: string;
 }
 
 const Finder = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, onFocus, zIndex = 20 }: FinderProps) => {
@@ -30,17 +37,18 @@ const Finder = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, o
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [isMaximized, setIsMaximized] = useState(false);
   const [savedPosition, setSavedPosition] = useState({ x: 0, y: 0 });
-  const [savedSize, setSavedSize] = useState({ width: 800, height: 600 });
+  const [savedSize, setSavedSize] = useState({ width: 900, height: 550 });
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const windowRef = useRef<HTMLDivElement>(null);
 
-  // Placeholder files - mixing real assets with placeholders
+  // Files with actual image sources
   const files: FileItem[] = [
-    { name: "2greedy.png", type: "image", icon: <Image className="w-8 h-8 text-blue-500" />, size: "2.4 MB", date: "Dec 1, 2024" },
-    { name: "Cardigan.png", type: "image", icon: <Image className="w-8 h-8 text-blue-500" />, size: "1.8 MB", date: "Nov 28, 2024" },
-    { name: "cumngo.jpg", type: "image", icon: <Image className="w-8 h-8 text-blue-500" />, size: "3.2 MB", date: "Nov 25, 2024" },
-    { name: "Luna Character Design Sheet.png", type: "image", icon: <Image className="w-8 h-8 text-blue-500" />, size: "5.1 MB", date: "Nov 20, 2024" },
-    { name: "Vampire artwork.png", type: "image", icon: <Image className="w-8 h-8 text-blue-500" />, size: "4.3 MB", date: "Nov 15, 2024" },
+    { name: "2greedy.png", type: "image", icon: <Image className="w-8 h-8 text-blue-500" />, size: "2.4 MB", date: "Dec 1, 2024", imageSrc: twoGreedyImg },
+    { name: "Cardigan.png", type: "image", icon: <Image className="w-8 h-8 text-blue-500" />, size: "1.8 MB", date: "Nov 28, 2024", imageSrc: cardiganImg },
+    { name: "cumngo.jpg", type: "image", icon: <Image className="w-8 h-8 text-blue-500" />, size: "3.2 MB", date: "Nov 25, 2024", imageSrc: cumngoImg },
+    { name: "Luna Character Design Sheet.png", type: "image", icon: <Image className="w-8 h-8 text-blue-500" />, size: "5.1 MB", date: "Nov 20, 2024", imageSrc: lunaImg },
+    { name: "Vampire artwork.png", type: "image", icon: <Image className="w-8 h-8 text-blue-500" />, size: "4.3 MB", date: "Nov 15, 2024", imageSrc: vampireImg },
     { name: "2 greedy.mp3", type: "audio", icon: <Music className="w-8 h-8 text-pink-500" />, size: "4.2 MB", date: "Dec 5, 2024" },
     { name: "cardigan. 08 23 25 3.mp3", type: "audio", icon: <Music className="w-8 h-8 text-pink-500" />, size: "5.8 MB", date: "Dec 3, 2024" },
     { name: "cumngo 3.mp3", type: "audio", icon: <Music className="w-8 h-8 text-pink-500" />, size: "6.1 MB", date: "Nov 30, 2024" },
@@ -57,8 +65,8 @@ const Finder = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, o
       const windowWidth = savedSize.width;
       const windowHeight = savedSize.height;
       setPosition({
-        x: (window.innerWidth - windowWidth) / 2 - 100,
-        y: (window.innerHeight - windowHeight) / 2 - 20,
+        x: (window.innerWidth - windowWidth) / 2,
+        y: (window.innerHeight - windowHeight) / 2,
       });
     }
   }, [isOpen, isMaximized, savedSize]);
@@ -171,7 +179,7 @@ const Finder = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, o
       setPosition(savedPosition);
     } else {
       setSavedPosition(position);
-      setSavedSize({ width: 800, height: 600 });
+      setSavedSize({ width: 900, height: 550 });
       setIsMaximized(true);
       setPosition({ x: 0, y: 0 });
     }
@@ -250,17 +258,32 @@ const Finder = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, o
         {/* Finder Content */}
         <div 
           className="bg-[hsl(0_0%_98%)] overflow-auto" 
-          style={{ height: isMaximized ? `calc(100vh - 48px)` : '552px' }}
+          style={{ height: isMaximized ? `calc(100vh - 48px)` : '502px' }}
         >
           {viewMode === 'grid' ? (
             <div className="p-6 grid grid-cols-4 gap-6">
               {files.map((file, index) => (
                 <div
                   key={index}
+                  onClick={() => {
+                    if (file.type === 'image' && file.imageSrc) {
+                      setSelectedImage(file.imageSrc);
+                    }
+                  }}
                   className="flex flex-col items-center gap-2 p-4 rounded-lg hover:bg-[hsl(220_10%_95%)] cursor-pointer transition-colors group"
                 >
-                  <div className="flex items-center justify-center w-16 h-16">
-                    {file.icon}
+                  <div className="flex items-center justify-center w-24 h-24 rounded-lg overflow-hidden bg-[hsl(220_10%_95%)] border border-[hsl(220_10%_85%)]">
+                    {file.type === 'image' && file.imageSrc ? (
+                      <img 
+                        src={file.imageSrc} 
+                        alt={file.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center w-full h-full">
+                        {file.icon}
+                      </div>
+                    )}
                   </div>
                   <span className="text-xs text-center text-card-foreground/80 group-hover:text-card-foreground break-words max-w-[120px]">
                     {file.name}
@@ -282,12 +305,25 @@ const Finder = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, o
                   {files.map((file, index) => (
                     <tr
                       key={index}
+                      onClick={() => {
+                        if (file.type === 'image' && file.imageSrc) {
+                          setSelectedImage(file.imageSrc);
+                        }
+                      }}
                       className="hover:bg-[hsl(220_10%_95%)] cursor-pointer border-b border-[hsl(220_10%_90%)]"
                     >
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            {file.icon}
+                          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                            {file.type === 'image' && file.imageSrc ? (
+                              <img 
+                                src={file.imageSrc} 
+                                alt={file.name}
+                                className="w-8 h-8 object-cover rounded"
+                              />
+                            ) : (
+                              file.icon
+                            )}
                           </div>
                           <span className="text-sm text-card-foreground">{file.name}</span>
                         </div>
@@ -344,6 +380,39 @@ const Finder = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, o
           </>
         )}
       </div>
+
+      {/* Image Viewer Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-8"
+          onClick={() => setSelectedImage(null)}
+          style={{ zIndex: zIndex + 100 }}
+        >
+          <div 
+            className="relative max-w-7xl max-h-[90vh] bg-white rounded-lg overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-[hsl(220_10%_85%)]">
+              <span className="text-sm font-medium text-card-foreground">
+                {files.find(f => f.imageSrc === selectedImage)?.name}
+              </span>
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="p-2 hover:bg-[hsl(220_10%_95%)] rounded transition-colors"
+              >
+                <X className="w-5 h-5 text-card-foreground/70" />
+              </button>
+            </div>
+            <div className="p-4 overflow-auto" style={{ maxHeight: 'calc(90vh - 60px)' }}>
+              <img 
+                src={selectedImage} 
+                alt="Preview"
+                className="max-w-full max-h-[80vh] object-contain mx-auto"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

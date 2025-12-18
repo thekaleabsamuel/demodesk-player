@@ -21,7 +21,7 @@ const Email = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, on
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [isMaximized, setIsMaximized] = useState(false);
   const [savedPosition, setSavedPosition] = useState({ x: 0, y: 0 });
-  const [savedSize, setSavedSize] = useState({ width: 750, height: 600 });
+  const [savedSize, setSavedSize] = useState({ width: 900, height: 550 });
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const windowRef = useRef<HTMLDivElement>(null);
@@ -31,8 +31,8 @@ const Email = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, on
       const windowWidth = savedSize.width;
       const windowHeight = savedSize.height;
       setPosition({
-        x: (window.innerWidth - windowWidth) / 2 + 100,
-        y: (window.innerHeight - windowHeight) / 2 - 20,
+        x: (window.innerWidth - windowWidth) / 2,
+        y: (window.innerHeight - windowHeight) / 2,
       });
     }
   }, [isOpen, isMaximized, savedSize]);
@@ -145,7 +145,7 @@ const Email = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, on
       setPosition(savedPosition);
     } else {
       setSavedPosition(position);
-      setSavedSize({ width: 750, height: 600 });
+      setSavedSize({ width: 900, height: 550 });
       setIsMaximized(true);
       setPosition({ x: 0, y: 0 });
     }
@@ -233,7 +233,7 @@ const Email = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore, on
         </div>
 
         {/* Email Content */}
-        <div className="bg-[hsl(40_20%_97%)] overflow-auto" style={{ height: isMaximized ? `calc(100vh - 48px)` : '552px' }}>
+        <div className="bg-[hsl(40_20%_97%)] overflow-auto" style={{ height: isMaximized ? `calc(100vh - 48px)` : '502px' }}>
           <div className="max-w-2xl mx-auto px-8 py-12">
             <div className="bg-white rounded-xl shadow-lg border border-[hsl(40_10%_90%)] p-8">
               <div className="text-center mb-8">

@@ -20,7 +20,7 @@ const Settings = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore,
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [isMaximized, setIsMaximized] = useState(false);
   const [savedPosition, setSavedPosition] = useState({ x: 0, y: 0 });
-  const [savedSize, setSavedSize] = useState({ width: 600, height: 500 });
+  const [savedSize, setSavedSize] = useState({ width: 900, height: 550 });
   const windowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -142,7 +142,7 @@ const Settings = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore,
       setPosition(savedPosition);
     } else {
       setSavedPosition(position);
-      setSavedSize({ width: 600, height: 500 });
+      setSavedSize({ width: 900, height: 550 });
       setIsMaximized(true);
       setPosition({ x: 0, y: 0 });
     }
@@ -204,53 +204,53 @@ const Settings = ({ isOpen, onClose, isMinimized = false, onMinimize, onRestore,
 
         {/* About Content */}
         <div 
-          className="bg-gradient-to-b from-[hsl(220_10%_98%)] to-white overflow-auto" 
-          style={{ height: isMaximized ? `calc(100vh - 48px)` : '452px' }}
+          className="bg-gradient-to-b from-[hsl(220_10%_98%)] to-white overflow-hidden" 
+          style={{ height: isMaximized ? `calc(100vh - 48px)` : '502px' }}
         >
-          <div className="flex flex-col items-center justify-center h-full px-8 py-12">
+          <div className="flex flex-col items-center justify-center h-full px-6 py-6">
             {/* Mac Logo/Icon */}
-            <div className="mb-8">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center shadow-lg">
-                <svg className="w-20 h-20 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+            <div className="mb-4">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center shadow-lg">
+                <svg className="w-16 h-16 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
                 </svg>
               </div>
             </div>
 
             {/* System Information */}
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-light text-card-foreground mb-2">macOS</h1>
-              <p className="text-2xl font-light text-card-foreground/70 mb-1">Ventura</p>
-              <p className="text-sm text-card-foreground/50">Version 13.2.1</p>
+            <div className="text-center mb-4">
+              <h1 className="text-3xl font-light text-card-foreground mb-1">macOS</h1>
+              <p className="text-xl font-light text-card-foreground/70 mb-0.5">Ventura</p>
+              <p className="text-xs text-card-foreground/50">Version 13.2.1</p>
             </div>
 
             {/* Hardware Info */}
-            <div className="w-full max-w-md space-y-4 mb-8">
-              <div className="flex justify-between items-center py-2 border-b border-[hsl(220_10%_90%)]">
-                <span className="text-sm text-card-foreground/70">Processor</span>
-                <span className="text-sm font-medium text-card-foreground">Apple M1</span>
+            <div className="w-full max-w-sm space-y-2 mb-4">
+              <div className="flex justify-between items-center py-1.5 border-b border-[hsl(220_10%_90%)]">
+                <span className="text-xs text-card-foreground/70">Processor</span>
+                <span className="text-xs font-medium text-card-foreground">Apple M1</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-[hsl(220_10%_90%)]">
-                <span className="text-sm text-card-foreground/70">Memory</span>
-                <span className="text-sm font-medium text-card-foreground">16 GB</span>
+              <div className="flex justify-between items-center py-1.5 border-b border-[hsl(220_10%_90%)]">
+                <span className="text-xs text-card-foreground/70">Memory</span>
+                <span className="text-xs font-medium text-card-foreground">16 GB</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-[hsl(220_10%_90%)]">
-                <span className="text-sm text-card-foreground/70">Graphics</span>
-                <span className="text-sm font-medium text-card-foreground">Apple M1</span>
+              <div className="flex justify-between items-center py-1.5 border-b border-[hsl(220_10%_90%)]">
+                <span className="text-xs text-card-foreground/70">Graphics</span>
+                <span className="text-xs font-medium text-card-foreground">Apple M1</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-[hsl(220_10%_90%)]">
-                <span className="text-sm text-card-foreground/70">Serial Number</span>
-                <span className="text-sm font-medium text-card-foreground">C02XK0XXXXXX</span>
+              <div className="flex justify-between items-center py-1.5 border-b border-[hsl(220_10%_90%)]">
+                <span className="text-xs text-card-foreground/70">Serial Number</span>
+                <span className="text-xs font-medium text-card-foreground">C02XK0XXXXXX</span>
               </div>
             </div>
 
             {/* Software Update Button */}
-            <button className="px-6 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors shadow-sm">
+            <button className="px-5 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-colors shadow-sm mb-3">
               Software Update...
             </button>
 
             {/* Copyright */}
-            <p className="text-xs text-card-foreground/40 mt-8 text-center">
+            <p className="text-[10px] text-card-foreground/40 text-center">
               Copyright © 2024 Apple Inc. All rights reserved.
             </p>
           </div>
