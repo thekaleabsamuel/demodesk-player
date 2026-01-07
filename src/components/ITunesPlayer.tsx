@@ -38,16 +38,17 @@ const ITunesPlayer = ({ isOpen, onClose, isMinimized = false, onMinimize, onRest
   const windowRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hasUserInteracted = useRef<boolean>(false);
 
   const allTracks = albums.flatMap(album => album.tracks);
   const displayedTracks = selectedAlbum ? selectedAlbum.tracks : allTracks;
 
-  // Set first track as current if none selected
+  // Set first track as current if none selected (but don't auto-load audio)
   useEffect(() => {
-    if (allTracks.length > 0 && !currentTrack) {
+    if (allTracks.length > 0 && !currentTrack && isOpen) {
       setCurrentTrack(allTracks[0]);
     }
-  }, [allTracks.length]);
+  }, [allTracks.length, isOpen]);
 
   useEffect(() => {
     if (isOpen && windowRef.current && !isMaximized) {
@@ -155,9 +156,23 @@ const ITunesPlayer = ({ isOpen, onClose, isMinimized = false, onMinimize, onRest
   }, [volume]);
 
   useEffect(() => {
-    if (audioRef.current && currentTrack) {
+    if (!audioRef.current || !currentTrack) return;
+    
+    const audio = audioRef.current;
+    const currentSrc = audio.src;
+    const newSrc = currentTrack.fileUrl;
+    
+    // Only load audio if user has interacted (clicked play or selected a track)
+    // This prevents auto-loading the first track when the component mounts
+    if (!hasUserInteracted.current && !isPlaying) {
+      return;
+    }
+    
+    // If track changed, we need to reload
+    const trackChanged = currentSrc && newSrc && currentSrc !== newSrc;
+    
+    if (trackChanged || (!currentSrc && (isPlaying || hasUserInteracted.current))) {
       // Stop any current playback
-      const audio = audioRef.current;
       audio.pause();
       audio.currentTime = 0;
       audio.src = ''; // Clear src first to prevent errors
@@ -209,7 +224,7 @@ const ITunesPlayer = ({ isOpen, onClose, isMinimized = false, onMinimize, onRest
         console.warn('⚠️ No audio file for track:', currentTrack.title);
       }
     }
-  }, [currentTrack]);
+  }, [currentTrack, isPlaying]);
 
   useEffect(() => {
     if (!audioRef.current || !currentTrack) return;
@@ -395,10 +410,15 @@ const ITunesPlayer = ({ isOpen, onClose, isMinimized = false, onMinimize, onRest
     }
   };
 
-  const handlePlayPause = () => setIsPlaying(!isPlaying);
+  const handlePlayPause = () => {
+    // Mark that user has interacted
+    hasUserInteracted.current = true;
+    setIsPlaying(!isPlaying);
+  };
 
   const handleNext = () => {
     if (!currentTrack) return;
+    hasUserInteracted.current = true;
     const currentIndex = displayedTracks.findIndex(t => t.id === currentTrack.id);
     const nextIndex = (currentIndex + 1) % displayedTracks.length;
     setCurrentTrack(displayedTracks[nextIndex]);
@@ -407,6 +427,7 @@ const ITunesPlayer = ({ isOpen, onClose, isMinimized = false, onMinimize, onRest
 
   const handlePrev = () => {
     if (!currentTrack) return;
+    hasUserInteracted.current = true;
     const currentIndex = displayedTracks.findIndex(t => t.id === currentTrack.id);
     const prevIndex = currentIndex === 0 ? displayedTracks.length - 1 : currentIndex - 1;
     setCurrentTrack(displayedTracks[prevIndex]);
@@ -414,6 +435,7 @@ const ITunesPlayer = ({ isOpen, onClose, isMinimized = false, onMinimize, onRest
   };
 
   const handleTrackSelect = (track: Track) => {
+    hasUserInteracted.current = true;
     setCurrentTrack(track);
     setProgress(0);
     setIsPlaying(true);
@@ -497,7 +519,7 @@ const ITunesPlayer = ({ isOpen, onClose, isMinimized = false, onMinimize, onRest
   return (
     <>
       {/* Hidden audio element */}
-      <audio ref={audioRef} />
+      <audio ref={audioRef} preload="none" />
       
       <div 
         ref={windowRef}
